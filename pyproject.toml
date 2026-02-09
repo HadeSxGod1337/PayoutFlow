@@ -1,0 +1,73 @@
+[tool.poetry]
+name = "payoutflow"
+version = "0.1.0"
+description = "REST service for payout request management"
+authors = []
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+django = ">=4.2"
+djangorestframework = "*"
+django-environ = "*"
+celery = { extras = ["redis"], version = "*" }
+psycopg2-binary = "*"
+gunicorn = "*"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-django = "*"
+pytest-cov = "*"
+factory-boy = "*"
+ruff = "*"
+mypy = "*"
+bandit = "*"
+django-stubs = "*"
+djangorestframework-stubs = "*"
+drf-spectacular = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["config", "payouts", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.10"
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+
+[tool.django-stubs]
+django_settings_module = "config.settings.development"
+
+[tool.mypy_drf_plugin]
+django_settings_module = "config.settings.development"
+
+[[tool.mypy.overrides]]
+module = ["tests.*", "payouts.migrations.*"]
+strict = false
+
+[tool.bandit]
+exclude_dirs = ["tests", "venv", ".venv"]
+skips = ["B101"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["test_*.py", "*_test.py"]
+addopts = "-v --tb=short"
+testpaths = ["tests"]

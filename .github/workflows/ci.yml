@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cached-poetry-deps
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-deps.outputs.cache-hit != 'true'
+        run: poetry install
+
+      - name: Install dependencies (cached)
+        if: steps.cached-poetry-deps.outputs.cache-hit == 'true'
+        run: poetry install --no-interaction
+
+      - name: Ruff
+        run: poetry run ruff check config payouts tests
+
+      - name: Ruff format
+        run: poetry run ruff format --check config payouts tests
+
+      - name: Mypy
+        run: poetry run mypy config payouts
+
+      - name: Bandit
+        run: poetry run bandit -r config payouts -x payouts/migrations -ll
+
+      - name: Pytest
+        run: poetry run pytest --cov=config --cov=payouts --cov-report=xml --cov-fail-under=70
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.test

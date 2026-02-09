@@ -1,0 +1,9 @@
+# For Docker/production. Prefer: poetry install
+# To sync from Poetry (pinned versions): make requirements
+django>=4.2
+djangorestframework
+django-environ
+celery[redis]
+psycopg2-binary
+gunicorn
+drf-spectacular
