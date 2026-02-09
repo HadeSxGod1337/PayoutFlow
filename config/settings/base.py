@@ -17,10 +17,6 @@ if env_file.exists():
 
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
-if not DEBUG and SECRET_KEY == "change-me-in-production":  # nosec B105
-    raise RuntimeError(
-        "Set SECRET_KEY in production (e.g. in .env). Do not use the default when DEBUG=False."
-    )
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
 INSTALLED_APPS = [

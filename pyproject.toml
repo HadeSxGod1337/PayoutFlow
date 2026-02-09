@@ -53,10 +53,10 @@ warn_return_any = true
 warn_unused_ignores = true
 
 [tool.django-stubs]
-django_settings_module = "config.settings.development"
+django_settings_module = "config.settings.test"
 
 [tool.mypy_drf_plugin]
-django_settings_module = "config.settings.development"
+django_settings_module = "config.settings.test"
 
 [[tool.mypy.overrides]]
 module = ["tests.*", "payouts.migrations.*"]
