@@ -25,6 +25,7 @@ repos:
         entry: poetry run mypy config payouts
         language: system
         types: [python]
+        pass_filenames: false
 
       - id: bandit
         name: bandit
