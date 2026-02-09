@@ -1,9 +1,17 @@
-.PHONY: install migrate run worker test lint format shell createsuperuser test-cov requirements
+.PHONY: install migrate run worker test lint format shell createsuperuser test-cov requirements pre-commit pre-commit-install
 
 # Требуется poetry в PATH (см. README)
 
 install:
 	poetry install
+
+# Pre-commit: установить хуки в .git (один раз после clone)
+pre-commit-install:
+	poetry run pre-commit install
+
+# Pre-commit: запустить все проверки по всему коду (для CI и локальной проверки)
+pre-commit:
+	poetry run pre-commit run --all-files
 
 # Regenerate requirements.txt from Poetry (pinned versions for Docker). Requires poetry-plugin-export.
 requirements:

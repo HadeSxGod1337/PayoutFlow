@@ -16,6 +16,7 @@ psycopg2-binary = "*"
 gunicorn = "*"
 
 [tool.poetry.group.dev.dependencies]
+pre-commit = "*"
 pytest = "*"
 pytest-django = "*"
 pytest-cov = "*"
