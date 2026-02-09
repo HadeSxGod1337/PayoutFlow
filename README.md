@@ -206,9 +206,18 @@ docker compose up --build
 
 По умолчанию используется **development** (http://localhost:8000, без редиректа на https). API: http://localhost:8000/api/health/ и т.д.
 
-Для деплоя в режиме production задайте в `.env`: `DJANGO_SETTINGS_MODULE=config.settings.production`.
+Для деплоя в режиме production задайте в `.env`: `DJANGO_SETTINGS_MODULE=config.settings.production`. При `docker compose up` поднимаются сервисы **web**, **worker** и **beat** (восстановление застрявших заявок). Для контейнера `web` в Compose настроен **healthcheck** по `GET /api/health/` — оркестраторы могут использовать его для перезапуска нездорового контейнера.
 
-Health check для контейнера `web`: запрос к `GET /api/health/`.
+Для воспроизводимой сборки образа можно заранее сгенерировать зафиксированные версии зависимостей: `make requirements` (экспорт из Poetry в `requirements.txt`).
+
+### Запуск на сервере от и до
+
+**Доступ из интернета:** порт приложения (8000) не должен быть открыт наружу напрямую. Перед приложением нужен **обратный прокси** (nginx, Caddy, Traefik) с **HTTPS** (например, Let's Encrypt). Production-настройки уже учитывают прокси (`SECURE_PROXY_SSL_HEADER`).
+
+- **Вариант A — Docker Compose (рекомендуется):** установить Docker и Docker Compose на сервер → клонировать репозиторий → скопировать `.env.example` в `.env` и задать production-значения (`DEBUG=False`, `SECRET_KEY`, `ALLOWED_HOSTS`, `DJANGO_SETTINGS_MODULE=config.settings.production`, пароль БД и т.д.) → выполнить `docker compose up -d --build` → настроить nginx (или аналог) с SSL и `proxy_pass` на `http://127.0.0.1:8000` с заголовком `X-Forwarded-Proto: $scheme`.
+- **Вариант B — без Docker (systemd):** установить Python 3.10+, PostgreSQL, Redis, Nginx → клонировать репозиторий, `poetry install --no-dev`, настроить `.env` для прода → `migrate` и `collectstatic` → запустить через systemd: gunicorn (порт 127.0.0.1:8000), Celery worker, Celery beat → настроить Nginx с SSL и проксированием на приложение.
+
+Подробные шаги (команды установки, примеры systemd-юнитов и конфиг nginx) — в [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ### CI
 

@@ -38,10 +38,31 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
   worker:
     build: .
     command: sh -c "export PYTHONPATH=/app && python -m celery -A config worker -l info"
+    env_file: .env
+    environment:
+      PYTHONPATH: /app
+      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.development}
+      DATABASE_URL: postgres://${POSTGRES_USER:-payoutflow}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-payoutflow}
+      CELERY_BROKER_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  beat:
+    build: .
+    command: sh -c "export PYTHONPATH=/app && celery -A config beat -l info"
     env_file: .env
     environment:
       PYTHONPATH: /app
