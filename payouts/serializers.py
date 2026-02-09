@@ -1,5 +1,6 @@
 import json
 from decimal import Decimal
+from typing import Any
 
 from rest_framework import serializers
 
@@ -51,9 +52,7 @@ class PayoutRequestSerializer(serializers.ModelSerializer[PayoutRequest]):
         try:
             serialized = json.dumps(value, sort_keys=True)
         except (TypeError, ValueError) as e:
-            raise serializers.ValidationError(
-                "Recipient details must be JSON-serializable."
-            ) from e
+            raise serializers.ValidationError("Recipient details must be JSON-serializable.") from e
         if len(serialized) > MAX_RECIPIENT_DETAILS_JSON_LENGTH:
             raise serializers.ValidationError("Recipient details too long.")
         return value
@@ -65,7 +64,7 @@ class PayoutRequestSerializer(serializers.ModelSerializer[PayoutRequest]):
             )
         return value
 
-    def validate(self, attrs: dict) -> dict:
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         if "status" not in attrs or self.instance is None:
             return attrs
         new_status = attrs["status"]

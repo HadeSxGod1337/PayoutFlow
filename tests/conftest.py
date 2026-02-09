@@ -32,9 +32,7 @@ def created_payout_id(api_client: APIClient, valid_payout_payload: dict) -> str:
 def payout_instance(valid_payout_payload: dict):  # type: ignore[no-untyped-def]
     from payouts.models import PayoutRequest
 
-    def _factory(
-        status: str = PayoutRequest.Status.PENDING, **kwargs: object
-    ) -> PayoutRequest:
+    def _factory(status: str = PayoutRequest.Status.PENDING, **kwargs: object) -> PayoutRequest:
         params = {
             "amount": valid_payout_payload["amount"],
             "currency": valid_payout_payload["currency"],

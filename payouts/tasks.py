@@ -5,8 +5,7 @@ from uuid import UUID
 from django.db import transaction
 from django.db.utils import OperationalError
 
-from celery import current_task
-from celery import shared_task  # type: ignore[import-untyped]
+from celery import current_task, shared_task  # type: ignore[import-untyped]
 from payouts.models import PayoutRequest
 
 logger = logging.getLogger(__name__)
