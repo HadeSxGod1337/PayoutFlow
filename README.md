@@ -92,7 +92,54 @@ make test
 
 - **Заявки:** `GET/POST /api/payouts/`, `GET/PATCH/DELETE /api/payouts/{id}/`
 - **Проверка состояния (health):** `GET /api/health/` — доступность БД; при ошибке возвращается 503 и `{"status": "unhealthy"}`.
-- **Документация (OpenAPI):** `/api/schema/`, Swagger UI и ReDoc.
+- **Документация (OpenAPI):** `/api/schema/`, **Swagger UI:** http://localhost:8000/api/docs/, **ReDoc:** http://localhost:8000/api/redoc/
+
+### Тестовые данные для Swagger (ручная проверка)
+
+Скопируйте JSON ниже в тело запроса в Swagger UI.
+
+**POST /api/payouts/** — создание заявки (минимальный пример):
+
+```json
+{
+  "amount": "100.50",
+  "currency": "USD",
+  "recipient_details": {
+    "account": "12345678",
+    "bank": "Test Bank",
+    "name": "Иван Иванов"
+  }
+}
+```
+
+**POST /api/payouts/** — с описанием и другой валютой:
+
+```json
+{
+  "amount": "5000.00",
+  "currency": "RUB",
+  "recipient_details": {
+    "card": "4276********1234",
+    "phone": "+79001234567",
+    "name": "Получатель"
+  },
+  "description": "Выплата по договору №123"
+}
+```
+
+Допустимые валюты: `RUB`, `USD`, `EUR`, `GBP`, `KZT`. `amount` — строка с числом, больше 0. `recipient_details` — любой непустой JSON-объект (до 2000 символов в сериализованном виде).
+
+**GET /api/payouts/** — фильтр по статусу: добавьте query-параметр `status` со значением `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED` или `CANCELLED`.
+
+**PATCH /api/payouts/{id}/** — отмена заявки (только для статусов PENDING или PROCESSING):
+
+```json
+{
+  "status": "CANCELLED"
+}
+```
+
+Через API можно только перевести заявку в `CANCELLED`; статусы `COMPLETED` и `FAILED` выставляет система.
 
 ---
 
@@ -113,7 +160,7 @@ make test
 - `DATABASE_URL` — строка подключения PostgreSQL.
 - `CELERY_BROKER_URL` — URL Redis.
 
-Используйте настройки **production:** `DJANGO_SETTINGS_MODULE=config.settings.production` (в Docker уже задано).
+Используйте настройки **production:** `DJANGO_SETTINGS_MODULE=config.settings.production`. В Docker по умолчанию — development (для локальной проверки); для прода задайте эту переменную в `.env`.
 
 ### Шаги на сервере
 
@@ -132,7 +179,11 @@ make test
 docker compose up --build
 ```
 
-Образы собираются с `config.settings.production`. Health check для контейнера `web`: запрос к `GET /api/health/`.
+По умолчанию используется **development** (http://localhost:8000, без редиректа на https). API: http://localhost:8000/api/health/ и т.д.
+
+Для деплоя в режиме production задайте в `.env`: `DJANGO_SETTINGS_MODULE=config.settings.production`.
+
+Health check для контейнера `web`: запрос к `GET /api/health/`.
 
 ### CI
 
