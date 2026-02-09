@@ -56,6 +56,14 @@ API будет доступен по адресу http://localhost:8000/api/
 make worker
 ```
 
+### 5.1. Запуск Celery beat (опционально, для продакшена)
+
+Для автоматического перевода «застрявших» заявок (PROCESSING дольше N минут) в FAILED запустите beat:
+
+```bash
+celery -A config beat -l info
+```
+
 ### 6. Запуск тестов
 
 ```bash
@@ -83,15 +91,19 @@ make test
 | `make test-cov` | Тесты с отчётом покрытия |
 | `make lint` | Проверка кода (ruff, mypy, bandit) |
 | `make format` | Форматирование кода (ruff) |
+| `make pre-commit-install` | Установить pre-commit хуки в репозиторий (один раз) |
+| `make pre-commit` | Запустить все pre-commit проверки по всему коду |
 | `make shell` | Django shell |
 | `make createsuperuser` | Создание суперпользователя |
+
+После `make pre-commit-install` при каждом `git commit` автоматически запускаются ruff, mypy, bandit и базовые проверки (пробелы, YAML и т.д.).
 
 ---
 
 ## API
 
 - **Заявки:** `GET/POST /api/payouts/`, `GET/PATCH/DELETE /api/payouts/{id}/`
-- **Проверка состояния (health):** `GET /api/health/` — доступность БД; при ошибке возвращается 503 и `{"status": "unhealthy"}`.
+- **Проверка состояния (health):** `GET /api/health/` — проверка БД и Redis (очередь Celery); при успехе — 200 и `{"status": "healthy", "database": "ok", "redis": "ok"}`, при ошибке — 503 и `{"status": "unhealthy", "checks": {...}}`.
 - **Документация (OpenAPI):** `/api/schema/`, **Swagger UI:** http://localhost:8000/api/docs/, **ReDoc:** http://localhost:8000/api/redoc/
 
 ### Тестовые данные для Swagger (ручная проверка)
@@ -127,7 +139,7 @@ make test
 }
 ```
 
-Допустимые валюты: `RUB`, `USD`, `EUR`, `GBP`, `KZT`. `amount` — строка с числом, больше 0. `recipient_details` — любой непустой JSON-объект (до 2000 символов в сериализованном виде).
+Допустимые валюты: `RUB`, `USD`, `EUR`, `GBP`, `KZT`. `amount` — строка с числом, больше 0. `recipient_details` — любой непустой JSON-объект (до 2000 символов в сериализованном виде). Для идемпотентности при повторных запросах передайте заголовок `Idempotency-Key` (например, UUID).
 
 **GET /api/payouts/** — фильтр по статусу: добавьте query-параметр `status` со значением `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED` или `CANCELLED`.
 
@@ -141,6 +153,18 @@ make test
 
 Через API можно только перевести заявку в `CANCELLED`; статусы `COMPLETED` и `FAILED` выставляет система.
 
+**Идемпотентность создания:** при повторном запросе с тем же телом и заголовком `Idempotency-Key` (например, UUID) возвращается ранее созданная заявка с кодом 200. Разный тело при том же ключе — 422.
+
+**DELETE:** удаление разрешено только для заявок в статусах PENDING, PROCESSING, CANCELLED. Удаление COMPLETED/FAILED запрещено (аудит и соответствие требованиям).
+
+### Безопасность и аутентификация
+
+По умолчанию API не требует аутентификации (тестовый режим). **Перед выкладкой в прод или в контур, похожий на прод, необходимо:**
+
+- Включить аутентификацию в DRF: задать `DEFAULT_AUTHENTICATION_CLASSES` (например, `rest_framework.authentication.TokenAuthentication` или JWT) и `DEFAULT_PERMISSION_CLASSES` (например, `IsAuthenticated`) в настройках.
+- Ограничить доступ по ролям при необходимости (только определённые пользователи/сервисы могут создавать выплаты или отменять их).
+- Использовать HTTPS и переменные окружения для секретов (см. раздел «Деплой»).
+
 ---
 
 ## Деплой
@@ -149,6 +173,7 @@ make test
 
 - **Приложение:** Django под gunicorn (не dev-сервер).
 - **Воркер:** Celery worker для фоновой обработки заявок.
+- **Beat (рекомендуется):** Celery beat для периодической задачи восстановления застрявших заявок (PROCESSING → FAILED).
 - **БД:** PostgreSQL.
 - **Брокер:** Redis (очередь задач Celery).
 

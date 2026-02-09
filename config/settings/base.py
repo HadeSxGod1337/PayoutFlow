@@ -91,6 +91,16 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
+# Payouts stuck in PROCESSING longer than this (minutes) are marked FAILED by beat task.
+PAYOUT_PROCESSING_STUCK_MINUTES = 15
+
+CELERY_BEAT_SCHEDULE = {
+    "recover-stuck-processing-payouts": {
+        "task": "payouts.tasks.recover_stuck_processing_payouts",
+        "schedule": 60.0,  # every 60 seconds (adjust for production, e.g. 300)
+    },
+}
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "PayoutFlow API",
     "DESCRIPTION": "REST API for payout request management",

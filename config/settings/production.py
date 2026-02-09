@@ -1,11 +1,10 @@
 from config.settings.base import *  # noqa: F401, F403
+from config.settings.base import SECRET_KEY
 
 DEBUG = False
 
 if SECRET_KEY == "change-me-in-production":  # nosec B105
-    raise RuntimeError(
-        "Set SECRET_KEY in production (e.g. in .env). Do not use the default."
-    )
+    raise RuntimeError("Set SECRET_KEY in production (e.g. in .env). Do not use the default.")
 
 # Security: HTTPS and cookies
 SECURE_SSL_REDIRECT = True

@@ -32,6 +32,46 @@ class TestPayoutCreate:
 
 
 @pytest.mark.django_db
+class TestPayoutIdempotency:
+    def test_idempotency_key_returns_same_payout_200(self, api_client, valid_payout_payload):  # type: ignore[no-untyped-def]
+        with patch("payouts.views.process_payout_request"):
+            r1 = api_client.post(
+                "/api/payouts/",
+                valid_payout_payload,
+                format="json",
+                HTTP_IDEMPOTENCY_KEY="key-123",
+            )
+            r2 = api_client.post(
+                "/api/payouts/",
+                valid_payout_payload,
+                format="json",
+                HTTP_IDEMPOTENCY_KEY="key-123",
+            )
+        assert r1.status_code == status.HTTP_201_CREATED
+        assert r2.status_code == status.HTTP_200_OK
+        assert r1.json()["id"] == r2.json()["id"]
+        assert PayoutRequest.objects.count() == 1
+
+    def test_idempotency_key_different_body_returns_422(self, api_client, valid_payout_payload):  # type: ignore[no-untyped-def]
+        with patch("payouts.views.process_payout_request"):
+            api_client.post(
+                "/api/payouts/",
+                valid_payout_payload,
+                format="json",
+                HTTP_IDEMPOTENCY_KEY="key-same",
+            )
+        other = {**valid_payout_payload, "amount": "999.00"}
+        response = api_client.post(
+            "/api/payouts/",
+            other,
+            format="json",
+            HTTP_IDEMPOTENCY_KEY="key-same",
+        )
+        assert response.status_code == 422
+        assert "detail" in response.json()
+
+
+@pytest.mark.django_db
 class TestPayoutValidation:
     def test_create_invalid_amount_zero(self, api_client, valid_payout_payload):  # type: ignore[no-untyped-def]
         valid_payout_payload["amount"] = "0"
@@ -112,3 +152,10 @@ class TestPayoutUpdateAndDelete:
         response = api_client.delete(f"/api/payouts/{created_payout_id}/")
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert not PayoutRequest.objects.filter(pk=created_payout_id).exists()
+
+    def test_delete_completed_forbidden(self, api_client, payout_instance):  # type: ignore[no-untyped-def]
+        payout = payout_instance(status=PayoutRequest.Status.COMPLETED)
+        response = api_client.delete(f"/api/payouts/{payout.id}/")
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert "detail" in response.json()
+        assert PayoutRequest.objects.filter(pk=payout.id).exists()
